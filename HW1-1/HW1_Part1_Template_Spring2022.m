@@ -26,6 +26,7 @@ clear points_rf_data;
 [m,n] = size(rf_data);
 time_axis = time_offset + (0:1:(m-1))*(1/fs); % in usec
 z_axis = soundv*time_axis./2;   % z axis
+dz = z_axis(2)-z_axis(1);
 x_axis = (0:1:(n-1))*dx;    % x axis
 envelope = abs(hilbert(rf_data));   % envelope detection
 envelope_dB = 20*log(envelope/max(max(envelope))+eps);    % log conversion with respect to the maximum value 
@@ -51,8 +52,11 @@ axis image
 % for example, in 1D (you may try to do the following procedure in 2D) 
 % distance = 10; % in terms of sample points. => you have to convert true distance to sample points
 % scatterer_x = [ zeros(1,100) 1 zeros(1, distance) 1 zeros(1,100)] % scatterer positions in x direction
-% PSF_x = max(PSF); % lateral beam profile. projection along the depth. Give it a thought: RF PSF or envelope-detected PSF, which one should you use? Remember to elaborate in your report.
+% PSF_x = max(PSF); % lateral beam profile. projection along the depth. 
+% Give it a thought: RF PSF or envelope-detected PSF, which one should you use? 
+% Remember to elaborate in your report.
 % image_x = conv(scatterer_x, PSF_x); % vary the distance, and then try the eye examination
+lateral_dis = dx;
 
 
 %(e)
@@ -70,30 +74,37 @@ axis image
 % idx = find(PSF >= 0.5); % PSF is the projected PSF after interpolation
 % FWHM_PSF = (idx(end) - idx(1))*spatial sampling interval;  % in um
 
-lateral_project = max(envelope,[],2);
-figure
-for ii = 1:length(pt_location)
-    PSF = lateral_project(floor(1+(ii-1)*m/length(pt_location)):floor(ii*m/length(pt_location)));
-    lateral_res = sum(PSF > 0.5*max(PSF)) * dz;
-    subplot(1,5,ii)
-    plot(project)
-end
-figure
-plot(z_axis,lateral_project)
 
-axial_project = max(envelope,[],1);
+lateral_res6dB = zeros(1,length(pt_location));
+axial_res6dB = zeros(1,length(pt_location));
+lateral_res20dB = zeros(1,length(pt_location));
+axial_res20dB = zeros(1,length(pt_location));
+for ii = 1:length(pt_location)
+    patch = envelope_dB(floor(1+(ii-1)*m/length(pt_location)):floor(ii*m/length(pt_location)),:);
+    lateral_project = max(patch,[],1);
+    lateral_res6dB(ii) = sum(lateral_project > (max(lateral_project)-6)) * dx;
+    lateral_res20dB(ii) = sum(lateral_project > (max(lateral_project)-20)) * dx;
+    axial_project = max(patch,[],2);
+    axial_res6dB(ii) = sum(axial_project > (max(axial_project)-6)) * dz;
+    axial_res20dB(ii) = sum(axial_project > (max(axial_project)-20)) * dz;
+end
+
+
+% (f)
+% Find the aperture size of the transducer based on the theoretic lateral resolution "at the focal point"
+ALINE = abs(fftshift(fft(rf_data(:,round(n/2)))));
+freq_axis = linspace(-fs/2,fs/2,length(ALINE));
+[~, ind] = max(ALINE); % center freq. of the transducer, in MHz, try "fft" the provided RF data to find out the center frequency. Give it a thought: Which A-line and which point-target data should you use? Again, remember to elaborate this point in your report.
+fc = abs(freq_axis(ind));
+lambda = soundv/fc; % wavelength of the center frequency
+depth = focal_pt;
+f_number = lateral_res6dB(3)/lambda;
+aper_size = focal_pt/f_number;  % aperture size, in mm
 figure
-plot(x_axis, axial_project)
-% 
-% % (f)
-% % Find the aperture size of the transducer based on the theoretic lateral resolution "at the focal point"
-% fc = ?; % center freq. of the transducer, in MHz, try "fft" the provided RF data to find out the center frequency. Give it a thought: Which A-line and which point-target data should you use? Again, remember to elaborate this point in your report.
-% lambda = ?; % wavelength of the center frequency
-% depth = ?;
-% f_number = ?;
-% aper_size = ??;  % aperture size, in mm
-% 
-% 
+plot(freq_axis,ALINE)
+xlabel('freq. (MHz)')
+
+
 % % (g)
 % 
 % % (h)
