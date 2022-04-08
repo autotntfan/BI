@@ -27,9 +27,9 @@ clear points_rf_data;
 time_axis = time_offset + (0:1:(m-1))*(1/fs); % in usec
 z_axis = soundv*time_axis./2;   % z axis
 dz = z_axis(2)-z_axis(1);
-x_axis = (0:1:(n-1))*dx;    % x axis
+x_axis = (0:1:(n-1))*dx - (n-1)*dx/2;    % x axis
 envelope = abs(hilbert(rf_data));   % envelope detection
-envelope_dB = 20*log(envelope/max(max(envelope))+eps);    % log conversion with respect to the maximum value 
+envelope_dB = 20*log10(envelope/max(max(envelope))+eps);    % log conversion with respect to the maximum value 
 figure
 image(x_axis, z_axis, envelope_dB+DR); % or imagesc()?
 colormap(gray(DR))
@@ -56,8 +56,43 @@ axis image
 % Give it a thought: RF PSF or envelope-detected PSF, which one should you use? 
 % Remember to elaborate in your report.
 % image_x = conv(scatterer_x, PSF_x); % vary the distance, and then try the eye examination
-lateral_dis = dx;
+Distance = 0.6; % in mm
+Distance = Distance/dz;
+scatterer = zeros(m,n);
+scatterer(round((m-Distance)/2),round(n/2)) = 1;
+scatterer(round((m+Distance)/2),round(n/2)) = 1;
+axial_img = zeros(1,length(pt_location));
+figure
+for ii = 1:length(pt_location)
+    PSF = envelope(floor(1+(ii-1)*m/length(pt_location)):floor(ii*m/length(pt_location)),:);
+    img = conv2(scatterer,PSF,'same');
+    envelope_img = abs(hilbert(img));
+    envelope_img_dB = 20*log10(envelope_img/max(max(envelope_img))+eps);
+    subplot(1,5,ii)
+    axial_project = max(envelope_img,[],2);
+    axial_img(ii) = sum(axial_project > (max(axial_project)-6)) * dz;
+    image(envelope_img_dB + DR)
+    colormap(gray(DR))
+end
 
+Distance = 0.75; % in mm
+Distance = Distance/dx; 
+scatterer = zeros(m,n);
+scatterer(round(m/2),round((n-Distance)/2)) = 1;
+scatterer(round(m/2),round((n+Distance)/2)) = 1;
+lateral_img = zeros(1,length(pt_location));
+figure
+for ii = 1:length(pt_location)
+    PSF = envelope(floor(1+(ii-1)*m/length(pt_location)):floor(ii*m/length(pt_location)),:);
+    img = conv2(scatterer,PSF,'same');
+    envelope_img = abs(hilbert(img));
+    envelope_img_dB = 20*log10(envelope_img/max(max(envelope_img))+eps);
+    subplot(1,5,ii)
+    lateral_project = max(envelope_img,[],1);
+    lateral_img(ii) = sum(lateral_project > (max(lateral_project)-6)) * dx;
+    image(envelope_img_dB + DR)
+    colormap(gray(DR))
+end
 
 %(e)
 % Check the -6ddB and -20 dB lateral and axial resolution point target by point target
