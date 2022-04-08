@@ -73,6 +73,9 @@ for ii = 1:length(pt_location)
     axial_img(ii) = sum(axial_project > (max(axial_project)-6)) * dz;
     image(envelope_img_dB + DR)
     colormap(gray(DR))
+    if ii == 5
+        RF_PSF = PSF;
+    end
 end
 
 Distance = 0.75; % in mm
@@ -140,35 +143,47 @@ plot(freq_axis,ALINE)
 xlabel('freq. (MHz)')
 
 
-% % (g)
-% 
-% % (h)
-% 
-% % (i)
-% N = ??; % number of scatterers
-% scatterer_pos_x = rand(N, 1)*scale; % scale: used to scale the value to within 4 cm, x position, position unit or lateral beam spacing (i.e., lateral spatial sampling interval) has to be the same as that of PSF
-% scatterer_pos_z = rand(N, 1)*scale; % scale: used to scale the value to within 4 cm, z position, position unit or axial sampling interval has to be the same as that of PSF
-% % or
-% % scatter_pos = rand(N)*scale;
-% scatterer_dist = zeros(Nz,Nx); % spatial distribution of the scatterers, 
-%                                % Nz: grid points along the z direction, determined by the "4 cm" field of view in z and the spatial sampling interval in the z direction
-% 							   % Nx: grid points along the x direction, determined by the "4 cm" field of view in x and the spatial sampling interval in the x direction
-% 
-% % locate the scatterers into the scatterer distribution matrix
-% for iX = 1:Nx,
-% 	for iZ = 1:Nz,
-% 		if ??? % if the grid matches the scatterer position (scatter_pos_x, scatter_pos_z)
-% 			scatterer_dist(iZ, iX) = 1; % assign the same back-scattering coef.
-% 		end
-% 	end
-% end
-% 
-% RF_image = conv2(scatterer_dist, RF_PSF); % note that the sampling interval (in x and in z) of the scatterer distribution should be the same as that of RF_PSF.
-%                                           % RF_PSF: PSF in RF data form
-% 										  % RF_image: RF data
-% % then envelope detection with Hilbert transform, log conversion, and then determine the image dynamic range to show the image 
-% % then estimate the contrast
-% 
-% 
-% % (j) Bonus
-% 
+% (g)
+
+% (h)
+
+% (i)
+scale = 40; % in mm
+N = 1e4; % number of scatterers
+Nz = round(scale/dz);
+Nx = round(scale/dx);
+scatterer_pos_x = rand(N, 1)*scale; % scale: used to scale the value to within 4 cm, x position, position unit or lateral beam spacing (i.e., lateral spatial sampling interval) has to be the same as that of PSF
+scatterer_pos_z = rand(N, 1)*scale; % scale: used to scale the value to within 4 cm, z position, position unit or axial sampling interval has to be the same as that of PSF
+% or
+% scatter_pos = rand(N)*scale;
+scatterer_dist = zeros(Nz,Nx); % spatial distribution of the scatterers, 
+                               % Nz: grid points along the z direction, determined by the "4 cm" field of view in z and the spatial sampling interval in the z direction
+							   % Nx: grid points along the x direction, determined by the "4 cm" field of view in x and the spatial sampling interval in the x direction
+
+scatterer_pos_x = round(scatterer_pos_x/dx);
+scatterer_pos_z = round(scatterer_pos_z/dz);
+% locate the scatterers into the scatterer distribution matrix
+for iX = 1:Nx,
+	for iZ = 1:Nz,
+        if ismember(find(iX==scatterer_pos_x),find(iZ==scatterer_pos_z))
+            scatterer_dist(iZ, iX) = 1;
+        end
+        iX
+% 		if ((iX*dx-20)^2+(iZ*dz-20)^2) <= 5^2 % if the grid matches the scatterer position (scatter_pos_x, scatter_pos_z)            
+%             scatterer_dist(iZ, iX) = 0.1; % assign the same back-scattering coef.
+%         end
+	end
+end
+
+RF_image = conv2(scatterer_dist, RF_PSF, 'same'); % note that the sampling interval (in x and in z) of the scatterer distribution should be the same as that of RF_PSF.
+                                          % RF_PSF: PSF in RF data form
+										  % RF_image: RF data
+% then envelope detection with Hilbert transform, log conversion, and then determine the image dynamic range to show the image 
+% then estimate the contrast
+envelope_img = abs(hilbert(RF_image));
+dB_img = 20*log10(envelope_img/max(max(envelope_img))+eps);
+image(dB_img + DR)
+colormap(gray(DR))
+figure, imagesc(scatterer_dist)
+% (j) Bonus
+
