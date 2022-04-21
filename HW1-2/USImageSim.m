@@ -24,7 +24,8 @@
 %													Modified by Meng-Lin Li, 10/29/2020
 %													Modified by Meng-Lin Li, 03/29/2022
 %
-
+clear
+close all
 % ---------- user specified parameters ---------------
 % !!! ALL PARAMETERS YOU NEED TO MODIFY ARE HERE !!!!
 cystdB=+20;
